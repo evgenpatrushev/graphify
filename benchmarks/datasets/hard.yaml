@@ -1,0 +1,338 @@
+codebase:
+  id: hard
+  name: "tiangolo/fastapi"
+  build:
+    repo_url: "https://github.com/tiangolo/fastapi"
+    commit: "a4bd128ed50b4955a41cf9785b404312c4689ab3"
+    subdir: "fastapi"
+    mode: ast
+
+defaults:
+  mode: bfs
+  depth: 3
+  token_budget: 2000
+  context_filters: null
+
+questions:
+
+  # ── ENTRYPOINT ──────────────────────────────────────────────────────────────
+
+  - id: hard-entry-01
+    question: "What is the FastAPI application class and how do you register a path operation on it (e.g. GET /items)?"
+    category: entrypoint
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "FastAPI", source_file: "applications.py", required: true }
+        - { label: ".get()", source_file: "applications.py", required: true }
+        - { label: ".add_api_route()", source_file: "applications.py", required: true }
+        - { label: "APIRoute", source_file: "applications.py", required: false }
+      seed_expected:
+        - { label: "FastAPI", source_file: "applications.py" }
+
+  - id: hard-entry-02
+    question: "How does FastAPI's APIRouter group path operations, and how is include_router used to mount a sub-router onto the main app?"
+    category: entrypoint
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "APIRouter", source_file: "routing.py", required: true }
+        - { label: ".include_router()", source_file: "routing.py", required: true }
+        - { label: ".include_router()", source_file: "applications.py", required: true }
+        - { label: "APIRoute", source_file: "routing.py", required: false }
+      relations:
+        - { source: ".include_router()", target: "APIRouter", relation: "calls" }
+      seed_expected:
+        - { label: "APIRouter", source_file: "routing.py" }
+        - { label: ".include_router()", source_file: "applications.py" }
+
+  # ── DEPENDENCY INJECTION ────────────────────────────────────────────────────
+
+  - id: hard-di-01
+    question: "Explain how FastAPI resolves dependencies at request time: trace the call from get_request_handler through solve_dependencies."
+    category: dependency
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py", required: true }
+        - { label: "get_request_handler()", source_file: "routing.py", required: true }
+        - { label: "run_endpoint_function()", source_file: "routing.py", required: true }
+        - { label: "Dependant", source_file: "dependencies/models.py", required: true }
+        - { label: "SolvedDependency", source_file: "dependencies/utils.py", required: true }
+        - { label: "AsyncExitStack", source_file: "dependencies/utils.py", required: false }
+      relations:
+        - { source: "get_request_handler()", target: "solve_dependencies()", relation: "calls" }
+        - { source: "solve_dependencies()", target: "get_dependant()", relation: "calls" }
+      seed_expected:
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py" }
+        - { label: "get_request_handler()", source_file: "routing.py" }
+
+  - id: hard-di-02
+    question: "How does get_dependant build the dependency graph for an endpoint function, and what helper functions does it call to classify each parameter?"
+    category: dependency
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "get_dependant()", source_file: "dependencies/utils.py", required: true }
+        - { label: "analyze_param()", source_file: "dependencies/utils.py", required: true }
+        - { label: "get_typed_signature()", source_file: "dependencies/utils.py", required: true }
+        - { label: "add_param_to_fields()", source_file: "dependencies/utils.py", required: true }
+        - { label: "add_non_field_param_to_dependency()", source_file: "dependencies/utils.py", required: false }
+        - { label: "Dependant", source_file: "dependencies/models.py", required: true }
+      relations:
+        - { source: "get_dependant()", target: "analyze_param()", relation: "calls" }
+        - { source: "get_dependant()", target: "get_typed_signature()", relation: "calls" }
+      seed_expected:
+        - { label: "get_dependant()", source_file: "dependencies/utils.py" }
+
+  - id: hard-di-03
+    question: "What is the Depends class and how does it declare a FastAPI dependency in a path-operation function signature?"
+    category: dependency
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "Depends", source_file: "params.py", required: true }
+        - { label: "Depends()", source_file: "param_functions.py", required: true }
+        - { label: "Dependant", source_file: "dependencies/models.py", required: false }
+        - { label: "get_dependant()", source_file: "dependencies/utils.py", required: false }
+      seed_expected:
+        - { label: "Depends", source_file: "params.py" }
+        - { label: "Depends()", source_file: "param_functions.py" }
+
+  - id: hard-di-04
+    question: "How does FastAPI implement dependency caching, and what data structures are used to avoid re-solving the same dependency within a single request?"
+    category: dependency
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "DependencyCacheKey", source_file: "dependencies/models.py", required: true }
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py", required: true }
+        - { label: "Dependant", source_file: "dependencies/models.py", required: true }
+        - { label: ".cache_key()", source_file: "dependencies/models.py", required: false }
+        - { label: "DependencyCacheKey", source_file: "dependencies/utils.py", required: false }
+      seed_expected:
+        - { label: "DependencyCacheKey", source_file: "dependencies/models.py" }
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py" }
+
+  # ── DATA FLOW ────────────────────────────────────────────────────────────────
+
+  - id: hard-flow-01
+    question: "Trace the request-handling data flow inside get_request_handler: how does it go from an incoming ASGI request to calling run_endpoint_function and producing a Response?"
+    category: data-flow
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "get_request_handler()", source_file: "routing.py", required: true }
+        - { label: "run_endpoint_function()", source_file: "routing.py", required: true }
+        - { label: "serialize_response()", source_file: "routing.py", required: true }
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py", required: true }
+        - { label: "request_params_to_args()", source_file: "dependencies/utils.py", required: false }
+        - { label: "request_body_to_args()", source_file: "dependencies/utils.py", required: false }
+      relations:
+        - { source: "serialize_response()", target: "jsonable_encoder()", relation: "calls" }
+      seed_expected:
+        - { label: "get_request_handler()", source_file: "routing.py" }
+
+  - id: hard-flow-02
+    question: "How does FastAPI convert endpoint return values into JSON-serializable form before building the HTTP response?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "jsonable_encoder()", source_file: "encoders.py", required: true }
+        - { label: "serialize_response()", source_file: "routing.py", required: true }
+        - { label: "ResponseValidationError", source_file: "exceptions.py", required: false }
+        - { label: "decimal_encoder()", source_file: "encoders.py", required: false }
+      relations:
+        - { source: "serialize_response()", target: "jsonable_encoder()", relation: "calls" }
+      seed_expected:
+        - { label: "jsonable_encoder()", source_file: "encoders.py" }
+        - { label: "serialize_response()", source_file: "routing.py" }
+
+  # ── API / PARAMETER DECLARATION ─────────────────────────────────────────────
+
+  - id: hard-api-01
+    question: "What parameter types can be declared in a FastAPI path operation (Query, Path, Body, Header, Cookie, Form, File) and which classes/functions back them?"
+    category: api
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "Query", source_file: "params.py", required: true }
+        - { label: "Path", source_file: "params.py", required: true }
+        - { label: "Body", source_file: "params.py", required: true }
+        - { label: "Header", source_file: "params.py", required: false }
+        - { label: "Cookie", source_file: "params.py", required: false }
+        - { label: "Form", source_file: "params.py", required: false }
+        - { label: "File", source_file: "params.py", required: false }
+        - { label: "Param", source_file: "params.py", required: false }
+        - { label: "Query()", source_file: "param_functions.py", required: false }
+        - { label: "Path()", source_file: "param_functions.py", required: false }
+        - { label: "Body()", source_file: "param_functions.py", required: false }
+      seed_expected:
+        - { label: "Query", source_file: "params.py" }
+        - { label: "Path", source_file: "params.py" }
+
+  - id: hard-api-02
+    question: "How does FastAPI extract and validate request body fields, including how request_body_to_args processes the raw form or JSON data?"
+    category: api
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "request_body_to_args()", source_file: "dependencies/utils.py", required: true }
+        - { label: "get_body_field()", source_file: "dependencies/utils.py", required: true }
+        - { label: "_should_embed_body_fields()", source_file: "dependencies/utils.py", required: false }
+        - { label: "_extract_form_body()", source_file: "dependencies/utils.py", required: false }
+        - { label: "Body", source_file: "params.py", required: false }
+      seed_expected:
+        - { label: "request_body_to_args()", source_file: "dependencies/utils.py" }
+        - { label: "get_body_field()", source_file: "dependencies/utils.py" }
+
+  # ── ERROR HANDLING ───────────────────────────────────────────────────────────
+
+  - id: hard-err-01
+    question: "How does FastAPI handle HTTPException and RequestValidationError — which handler functions are registered and what responses do they produce?"
+    category: error-handling
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "HTTPException", source_file: "exceptions.py", required: true }
+        - { label: "http_exception_handler()", source_file: "exception_handlers.py", required: true }
+        - { label: "RequestValidationError", source_file: "exceptions.py", required: true }
+        - { label: "request_validation_exception_handler()", source_file: "exception_handlers.py", required: true }
+        - { label: "JSONResponse", source_file: "exception_handlers.py", required: false }
+      seed_expected:
+        - { label: "http_exception_handler()", source_file: "exception_handlers.py" }
+        - { label: "HTTPException", source_file: "exceptions.py" }
+
+  - id: hard-err-02
+    question: "What is ResponseValidationError and when does FastAPI raise it during response serialization?"
+    category: error-handling
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "ResponseValidationError", source_file: "exceptions.py", required: true }
+        - { label: "serialize_response()", source_file: "routing.py", required: true }
+        - { label: "jsonable_encoder()", source_file: "encoders.py", required: false }
+        - { label: "ValidationException", source_file: "exceptions.py", required: false }
+      relations:
+        - { source: "serialize_response()", target: "ResponseValidationError", relation: "calls" }
+      seed_expected:
+        - { label: "ResponseValidationError", source_file: "exceptions.py" }
+
+  # ── SECURITY ─────────────────────────────────────────────────────────────────
+
+  - id: hard-sec-01
+    question: "How does OAuth2PasswordBearer implement bearer-token authentication in FastAPI, and what is its relationship to SecurityBase?"
+    category: api
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "OAuth2PasswordBearer", source_file: "security/oauth2.py", required: true }
+        - { label: "OAuth2", source_file: "security/oauth2.py", required: true }
+        - { label: "SecurityBase", source_file: "security/base.py", required: false }
+        - { label: "Security()", source_file: "param_functions.py", required: false }
+        - { label: "Security", source_file: "params.py", required: false }
+        - { label: "SecurityScopes", source_file: "security/oauth2.py", required: false }
+      relations:
+        - { source: "OAuth2PasswordBearer", target: "OAuth2", relation: "inherits" }
+      seed_expected:
+        - { label: "OAuth2PasswordBearer", source_file: "security/oauth2.py" }
+
+  - id: hard-sec-02
+    question: "How do the API-key security schemes (APIKeyQuery, APIKeyHeader, APIKeyCookie) work in FastAPI and which base class do they share?"
+    category: api
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "APIKeyQuery", source_file: "security/api_key.py", required: true }
+        - { label: "APIKeyHeader", source_file: "security/api_key.py", required: true }
+        - { label: "APIKeyCookie", source_file: "security/api_key.py", required: false }
+        - { label: "APIKeyBase", source_file: "security/api_key.py", required: true }
+      seed_expected:
+        - { label: "APIKeyQuery", source_file: "security/api_key.py" }
+        - { label: "APIKeyBase", source_file: "security/api_key.py" }
+
+  # ── MIDDLEWARE ───────────────────────────────────────────────────────────────
+
+  - id: hard-mid-01
+    question: "What is AsyncExitStackMiddleware and why does FastAPI inject it into the middleware stack for dependency lifespan management?"
+    category: dependency
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "AsyncExitStackMiddleware", source_file: "middleware/asyncexitstack.py", required: true }
+        - { label: ".build_middleware_stack()", source_file: "applications.py", required: false }
+        - { label: ".middleware()", source_file: "applications.py", required: false }
+        - { label: "solve_dependencies()", source_file: "dependencies/utils.py", required: false }
+        - { label: "AsyncExitStack", source_file: "dependencies/utils.py", required: false }
+      seed_expected:
+        - { label: "AsyncExitStackMiddleware", source_file: "middleware/asyncexitstack.py" }
+
+  # ── OPENAPI / CONFIG ──────────────────────────────────────────────────────────
+
+  - id: hard-oas-01
+    question: "How does FastAPI generate its OpenAPI schema: what does the .openapi() method do and which function in openapi/utils.py does the heavy lifting?"
+    category: config
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: ".openapi()", source_file: "applications.py", required: true }
+        - { label: "get_openapi()", source_file: "openapi/utils.py", required: true }
+        - { label: "get_openapi_path()", source_file: "openapi/utils.py", required: false }
+        - { label: "get_openapi_operation_metadata()", source_file: "openapi/utils.py", required: false }
+        - { label: "get_fields_from_routes()", source_file: "openapi/utils.py", required: false }
+      relations:
+        - { source: ".openapi()", target: "get_openapi()", relation: "calls" }
+      seed_expected:
+        - { label: "get_openapi()", source_file: "openapi/utils.py" }
+        - { label: ".openapi()", source_file: "applications.py" }
+
+  - id: hard-oas-02
+    question: "How does FastAPI collect security scheme definitions for the OpenAPI spec, and how does get_openapi_security_definitions interact with Dependant?"
+    category: config
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "get_openapi_security_definitions()", source_file: "openapi/utils.py", required: true }
+        - { label: "Dependant", source_file: "dependencies/models.py", required: true }
+        - { label: "get_openapi()", source_file: "openapi/utils.py", required: false }
+        - { label: "SecurityBase", source_file: "dependencies/models.py", required: false }
+        - { label: "jsonable_encoder()", source_file: "encoders.py", required: false }
+      seed_expected:
+        - { label: "get_openapi_security_definitions()", source_file: "openapi/utils.py" }
+
+  # ── ARCHITECTURE ─────────────────────────────────────────────────────────────
+
+  - id: hard-arch-01
+    question: "Describe the class hierarchy and responsibilities from FastAPI down through APIRouter and APIRoute: what does each class own and how do they relate to Starlette's routing primitives?"
+    category: architecture
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "FastAPI", source_file: "applications.py", required: true }
+        - { label: "APIRouter", source_file: "routing.py", required: true }
+        - { label: "APIRoute", source_file: "routing.py", required: true }
+        - { label: "get_request_handler()", source_file: "routing.py", required: true }
+        - { label: ".get_route_handler()", source_file: "routing.py", required: false }
+        - { label: "request_response()", source_file: "routing.py", required: false }
+      seed_expected:
+        - { label: "FastAPI", source_file: "applications.py" }
+        - { label: "APIRouter", source_file: "routing.py" }
+        - { label: "APIRoute", source_file: "routing.py" }
+
+  - id: hard-arch-02
+    question: "How does FastAPI manage application lifespan (startup/shutdown hooks and the lifespan context manager), and what is _DefaultLifespan's role?"
+    category: architecture
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "Lifespan", source_file: "routing.py", required: true }
+        - { label: "_DefaultLifespan", source_file: "routing.py", required: true }
+        - { label: "_wrap_gen_lifespan_context()", source_file: "routing.py", required: false }
+        - { label: "_merge_lifespan_context()", source_file: "routing.py", required: false }
+        - { label: "._startup()", source_file: "routing.py", required: false }
+        - { label: "._shutdown()", source_file: "routing.py", required: false }
+        - { label: "Lifespan", source_file: "applications.py", required: false }
+      seed_expected:
+        - { label: "_DefaultLifespan", source_file: "routing.py" }
+        - { label: "Lifespan", source_file: "routing.py" }

@@ -1,0 +1,334 @@
+codebase:
+  id: medium
+  name: "pallets/flask"
+  build:
+    repo_url: "https://github.com/pallets/flask"
+    commit: "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81"
+    subdir: "src/flask"
+    mode: ast
+
+defaults:
+  mode: bfs
+  depth: 3
+  token_budget: 2000
+  context_filters: null
+
+questions:
+
+  # ── ENTRYPOINT ──────────────────────────────────────────────────────────────
+
+  - id: medium-entry-01
+    question: "What is the Flask class and how does a WSGI server invoke it to handle an HTTP request?"
+    category: entrypoint
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "Flask", source_file: "app.py", required: true }
+        - { label: ".__call__()", source_file: "app.py", required: true }
+        - { label: ".wsgi_app()", source_file: "app.py", required: true }
+        - { label: ".run()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".__call__()", target: ".wsgi_app()", relation: "calls", required: true }
+      seed_expected:
+        - { label: "Flask", source_file: "app.py" }
+        - { label: ".__call__()", source_file: "app.py" }
+
+  - id: medium-entry-02
+    question: "What does Flask.wsgi_app() do and why is it separate from Flask.__call__()?"
+    category: entrypoint
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: ".wsgi_app()", source_file: "app.py", required: true }
+        - { label: ".__call__()", source_file: "app.py", required: true }
+        - { label: ".full_dispatch_request()", source_file: "app.py", required: true }
+        - { label: ".request_context()", source_file: "app.py", required: true }
+        - { label: ".handle_exception()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".wsgi_app()", target: ".full_dispatch_request()", relation: "calls", required: true }
+        - { source: ".wsgi_app()", target: ".request_context()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".wsgi_app()", source_file: "app.py" }
+
+  # ── DATA FLOW ────────────────────────────────────────────────────────────────
+
+  - id: medium-flow-01
+    question: "How does Flask dispatch an incoming request to the correct view function? Trace the call chain from wsgi_app through to the view."
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: ".wsgi_app()", source_file: "app.py", required: true }
+        - { label: ".full_dispatch_request()", source_file: "app.py", required: true }
+        - { label: ".dispatch_request()", source_file: "app.py", required: true }
+        - { label: ".preprocess_request()", source_file: "app.py", required: true }
+        - { label: ".finalize_request()", source_file: "app.py", required: false }
+        - { label: ".make_response()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".wsgi_app()", target: ".full_dispatch_request()", relation: "calls", required: true }
+        - { source: ".full_dispatch_request()", target: ".dispatch_request()", relation: "calls", required: true }
+        - { source: ".full_dispatch_request()", target: ".preprocess_request()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".full_dispatch_request()", source_file: "app.py" }
+        - { label: ".dispatch_request()", source_file: "app.py" }
+
+  - id: medium-flow-02
+    question: "What preprocessing and postprocessing hooks does Flask call around view dispatch, and in what order?"
+    category: data-flow
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: ".preprocess_request()", source_file: "app.py", required: true }
+        - { label: ".process_response()", source_file: "app.py", required: true }
+        - { label: ".do_teardown_request()", source_file: "app.py", required: true }
+        - { label: ".do_teardown_appcontext()", source_file: "app.py", required: true }
+        - { label: ".full_dispatch_request()", source_file: "app.py", required: false }
+        - { label: ".finalize_request()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".full_dispatch_request()", target: ".preprocess_request()", relation: "calls", required: true }
+        - { source: ".full_dispatch_request()", target: ".finalize_request()", relation: "calls", required: false }
+      seed_expected:
+        - { label: ".preprocess_request()", source_file: "app.py" }
+        - { label: ".process_response()", source_file: "app.py" }
+
+  # ── ROUTING ──────────────────────────────────────────────────────────────────
+
+  - id: medium-routing-01
+    question: "How does Flask register a URL rule, and what is the relationship between @app.route, add_url_rule, and the Scaffold base class?"
+    category: api
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: ".route()", source_file: "sansio/scaffold.py", required: true }
+        - { label: ".add_url_rule()", source_file: "sansio/scaffold.py", required: true }
+        - { label: ".add_url_rule()", source_file: "sansio/app.py", required: true }
+        - { label: "Flask", source_file: "app.py", required: false }
+        - { label: "Scaffold", source_file: "sansio/scaffold.py", required: false }
+      relations:
+        - { source: ".route()", target: ".add_url_rule()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".add_url_rule()", source_file: "sansio/app.py" }
+        - { label: ".route()", source_file: "sansio/scaffold.py" }
+
+  # ── REQUEST / APP CONTEXT ────────────────────────────────────────────────────
+
+  - id: medium-ctx-01
+    question: "What is AppContext in Flask, and what happens when it is pushed and popped?"
+    category: data-flow
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "AppContext", source_file: "ctx.py", required: true }
+        - { label: ".push()", source_file: "ctx.py", required: true }
+        - { label: ".pop()", source_file: "ctx.py", required: true }
+        - { label: ".app_context()", source_file: "app.py", required: false }
+        - { label: ".do_teardown_appcontext()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".push()", target: "._get_session()", relation: "calls", required: false }
+      seed_expected:
+        - { label: "AppContext", source_file: "ctx.py" }
+        - { label: ".push()", source_file: "ctx.py" }
+
+  - id: medium-ctx-02
+    question: "How does Flask's request context differ from the app context, and how does pushing a request context relate to AppContext.from_environ?"
+    category: data-flow
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "AppContext", source_file: "ctx.py", required: true }
+        - { label: ".from_environ()", source_file: "ctx.py", required: true }
+        - { label: ".push()", source_file: "ctx.py", required: true }
+        - { label: ".match_request()", source_file: "ctx.py", required: true }
+        - { label: ".request_context()", source_file: "app.py", required: false }
+        - { label: "has_request_context()", source_file: "ctx.py", required: false }
+        - { label: "has_app_context()", source_file: "ctx.py", required: false }
+      relations:
+        - { source: ".push()", target: "._get_session()", relation: "calls", required: false }
+        - { source: ".push()", target: ".match_request()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".from_environ()", source_file: "ctx.py" }
+        - { label: ".push()", source_file: "ctx.py" }
+
+  # ── GLOBAL PROXIES ───────────────────────────────────────────────────────────
+
+  - id: medium-globals-01
+    question: "How do Flask's global proxies (request, session, current_app, g) work and what module defines them?"
+    category: architecture
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "RequestProxy", source_file: "globals.py", required: true }
+        - { label: "SessionMixinProxy", source_file: "globals.py", required: true }
+        - { label: "AppContextProxy", source_file: "globals.py", required: true }
+        - { label: "_AppCtxGlobalsProxy", source_file: "globals.py", required: true }
+        - { label: "FlaskProxy", source_file: "globals.py", required: false }
+        - { label: "ProxyMixin", source_file: "globals.py", required: false }
+        - { label: "AppContext", source_file: "ctx.py", required: false }
+        - { label: "_AppCtxGlobals", source_file: "ctx.py", required: false }
+      seed_expected:
+        - { label: "RequestProxy", source_file: "globals.py" }
+        - { label: "AppContextProxy", source_file: "globals.py" }
+
+  # ── BLUEPRINTS ───────────────────────────────────────────────────────────────
+
+  - id: medium-blueprint-01
+    question: "What is a Flask Blueprint and how is it registered on the application?"
+    category: architecture
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "Blueprint", source_file: "sansio/blueprints.py", required: true }
+        - { label: ".register()", source_file: "sansio/blueprints.py", required: true }
+        - { label: ".register_blueprint()", source_file: "sansio/app.py", required: true }
+        - { label: "BlueprintSetupState", source_file: "sansio/blueprints.py", required: false }
+        - { label: "Blueprint", source_file: "blueprints.py", required: false }
+      relations:
+        - { source: ".register()", target: "._merge_blueprint_funcs()", relation: "calls", required: false }
+        - { source: ".register()", target: ".add_url_rule()", relation: "calls", required: false }
+      seed_expected:
+        - { label: "Blueprint", source_file: "sansio/blueprints.py" }
+        - { label: ".register_blueprint()", source_file: "sansio/app.py" }
+
+  - id: medium-blueprint-02
+    question: "How does BlueprintSetupState.add_url_rule() register a blueprint's routes with the application?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "BlueprintSetupState", source_file: "sansio/blueprints.py", required: true }
+        - { label: ".add_url_rule()", source_file: "sansio/blueprints.py", required: true }
+        - { label: ".add_url_rule()", source_file: "sansio/app.py", required: true }
+        - { label: "Blueprint", source_file: "sansio/blueprints.py", required: false }
+        - { label: ".record()", source_file: "sansio/blueprints.py", required: false }
+      relations:
+        - { source: ".add_url_rule()", target: ".add_url_rule()", relation: "calls", required: true }
+        - { source: ".add_url_rule()", target: ".record()", relation: "calls", required: false }
+      seed_expected:
+        - { label: "BlueprintSetupState", source_file: "sansio/blueprints.py" }
+
+  # ── ERROR HANDLING ───────────────────────────────────────────────────────────
+
+  - id: medium-error-01
+    question: "How does Flask handle exceptions raised in a view function? What is the role of handle_user_exception and handle_http_exception?"
+    category: error-handling
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: ".handle_user_exception()", source_file: "app.py", required: true }
+        - { label: ".handle_http_exception()", source_file: "app.py", required: true }
+        - { label: ".full_dispatch_request()", source_file: "app.py", required: true }
+        - { label: "HTTPException", source_file: "app.py", required: false }
+        - { label: "._find_error_handler()", source_file: "sansio/app.py", required: false }
+      relations:
+        - { source: ".full_dispatch_request()", target: ".handle_user_exception()", relation: "calls", required: true }
+        - { source: ".handle_user_exception()", target: ".handle_http_exception()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".handle_user_exception()", source_file: "app.py" }
+        - { label: ".handle_http_exception()", source_file: "app.py" }
+
+  - id: medium-error-02
+    question: "What is Flask.handle_exception() used for and how does it differ from handle_user_exception?"
+    category: error-handling
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: ".handle_exception()", source_file: "app.py", required: true }
+        - { label: ".handle_user_exception()", source_file: "app.py", required: true }
+        - { label: ".wsgi_app()", source_file: "app.py", required: true }
+        - { label: "._find_error_handler()", source_file: "sansio/app.py", required: false }
+        - { label: ".log_exception()", source_file: "app.py", required: false }
+      relations:
+        - { source: ".wsgi_app()", target: ".handle_exception()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".handle_exception()", source_file: "app.py" }
+
+  # ── CONFIGURATION ────────────────────────────────────────────────────────────
+
+  - id: medium-config-01
+    question: "How does Flask's Config class work and what are the different ways to load configuration values?"
+    category: config
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "Config", source_file: "config.py", required: true }
+        - { label: ".from_envvar()", source_file: "config.py", required: true }
+        - { label: ".from_object()", source_file: "config.py", required: true }
+        - { label: ".from_pyfile()", source_file: "config.py", required: true }
+        - { label: ".from_prefixed_env()", source_file: "config.py", required: false }
+        - { label: ".from_file()", source_file: "config.py", required: false }
+        - { label: ".from_mapping()", source_file: "config.py", required: false }
+        - { label: "ConfigAttribute", source_file: "config.py", required: false }
+      seed_expected:
+        - { label: "Config", source_file: "config.py" }
+
+  # ── CLI ──────────────────────────────────────────────────────────────────────
+
+  - id: medium-cli-01
+    question: "How does Flask's CLI work? What is FlaskGroup, ScriptInfo, and how does it locate the Flask application?"
+    category: entrypoint
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "FlaskGroup", source_file: "cli.py", required: true }
+        - { label: "ScriptInfo", source_file: "cli.py", required: true }
+        - { label: ".load_app()", source_file: "cli.py", required: true }
+        - { label: "with_appcontext()", source_file: "cli.py", required: false }
+        - { label: "AppGroup", source_file: "cli.py", required: false }
+      relations:
+        - { source: "ScriptInfo", target: ".load_app()", relation: "method", required: true }
+      seed_expected:
+        - { label: "FlaskGroup", source_file: "cli.py" }
+        - { label: "ScriptInfo", source_file: "cli.py" }
+
+  # ── SESSIONS ─────────────────────────────────────────────────────────────────
+
+  - id: medium-sessions-01
+    question: "How does Flask's session system work? What is SessionInterface, SecureCookieSessionInterface, and when are open_session and save_session called?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "SessionInterface", source_file: "sessions.py", required: true }
+        - { label: "SecureCookieSessionInterface", source_file: "sessions.py", required: true }
+        - { label: ".open_session()", source_file: "sessions.py", required: true }
+        - { label: ".save_session()", source_file: "sessions.py", required: true }
+        - { label: "SecureCookieSession", source_file: "sessions.py", required: false }
+        - { label: "SessionMixin", source_file: "sessions.py", required: false }
+        - { label: "NullSession", source_file: "sessions.py", required: false }
+      relations:
+        - { source: "SecureCookieSessionInterface", target: "SessionInterface", relation: "inherits", required: true }
+      seed_expected:
+        - { label: "SecureCookieSessionInterface", source_file: "sessions.py" }
+        - { label: "SessionInterface", source_file: "sessions.py" }
+
+  # ── HELPERS / API ────────────────────────────────────────────────────────────
+
+  - id: medium-api-01
+    question: "What helper functions does Flask provide in helpers.py for URL generation, flashing messages, and sending files?"
+    category: api
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "url_for()", source_file: "helpers.py", required: true }
+        - { label: "flash()", source_file: "helpers.py", required: true }
+        - { label: "send_file()", source_file: "helpers.py", required: true }
+        - { label: "abort()", source_file: "helpers.py", required: false }
+        - { label: "get_flashed_messages()", source_file: "helpers.py", required: false }
+        - { label: "redirect()", source_file: "helpers.py", required: false }
+        - { label: "send_from_directory()", source_file: "helpers.py", required: false }
+      seed_expected:
+        - { label: "url_for()", source_file: "helpers.py" }
+        - { label: "flash()", source_file: "helpers.py" }
+
+  - id: medium-api-02
+    question: "How does the Request object in Flask extend werkzeug's base request, and what Flask-specific attributes does it expose (endpoint, blueprint)?"
+    category: api
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "Request", source_file: "wrappers.py", required: true }
+        - { label: "Response", source_file: "wrappers.py", required: false }
+        - { label: "Flask", source_file: "app.py", required: false }
+        - { label: "AppContext", source_file: "ctx.py", required: false }
+      seed_expected:
+        - { label: "Request", source_file: "wrappers.py" }

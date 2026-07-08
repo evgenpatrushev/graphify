@@ -27,3 +27,8 @@ scripts/run_k2_*.py
 scripts/llm.py
 scripts/benchmark_kimi*.json
 scripts/benchmark_kimi*.py
+
+# Query-quality benchmark: fetched corpora + built graphs/reports are not committed
+benchmarks/corpora/
+benchmarks/out/
+benchmarks/__pycache__/

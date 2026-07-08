@@ -1,0 +1,263 @@
+codebase:
+  id: simple
+  name: "pallets/click"
+  build:
+    repo_url: "https://github.com/pallets/click"
+    commit: "8a1b1a33d739be05b7e91251e3c0dde77c5e152f"
+    subdir: "src/click"
+    mode: ast
+
+defaults:
+  mode: bfs
+  depth: 3
+  token_budget: 2000
+  context_filters: null
+
+questions:
+
+  # ── ENTRYPOINT ─────────────────────────────────────────────────────────────
+
+  - id: simple-entry-01
+    question: "What is the main entry point for running a Click command from the command line, and what does it do?"
+    category: entrypoint
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: ".main()", source_file: "core.py", required: true }
+        - { label: "Command", source_file: "core.py", required: true }
+        - { label: ".make_context()", source_file: "core.py", required: false }
+        - { label: ".invoke()", source_file: "core.py", required: false }
+      relations:
+        - { source: ".main()", target: ".invoke()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".main()", source_file: "core.py" }
+
+  - id: simple-entry-02
+    question: "How does Click detect the program name used in usage messages?"
+    category: entrypoint
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "_detect_program_name()", source_file: "utils.py", required: true }
+        - { label: ".main()", source_file: "core.py", required: true }
+      relations:
+        - { source: ".main()", target: "_detect_program_name()", relation: "calls", required: true }
+      seed_expected:
+        - { label: "_detect_program_name()", source_file: "utils.py" }
+
+  # ── ARCHITECTURE / DEPENDENCY ──────────────────────────────────────────────
+
+  - id: simple-arch-01
+    question: "What is the class hierarchy for Click commands? How do Command, Group, and _BaseCommand relate to each other?"
+    category: architecture
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "Command", source_file: "core.py", required: true }
+        - { label: "Group", source_file: "core.py", required: true }
+        - { label: "_BaseCommand", source_file: "core.py", required: true }
+        - { label: "CommandCollection", source_file: "core.py", required: false }
+        - { label: "_MultiCommand", source_file: "core.py", required: false }
+      relations:
+        - { source: "Group", target: "Command", relation: "inherits", required: true }
+        - { source: "_BaseCommand", target: "Command", relation: "inherits", required: false }
+      seed_expected:
+        - { label: "Command", source_file: "core.py" }
+        - { label: "Group", source_file: "core.py" }
+
+  - id: simple-dep-01
+    question: "Which modules does core.py depend on within the click package?"
+    category: dependency
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "core.py", source_file: "core.py", required: true }
+        - { label: "exceptions.py", source_file: "exceptions.py", required: true }
+        - { label: "formatting.py", source_file: "formatting.py", required: false }
+        - { label: "utils.py", source_file: "utils.py", required: false }
+        - { label: "parser.py", source_file: "parser.py", required: false }
+      seed_expected:
+        - { label: "core.py", source_file: "core.py" }
+
+  # ── DATA FLOW ─────────────────────────────────────────────────────────────
+
+  - id: simple-flow-01
+    question: "How does click pass the Context object to a command's callback function?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "Context", source_file: "core.py", required: true }
+        - { label: "pass_context()", source_file: "decorators.py", required: true }
+        - { label: "get_current_context()", source_file: "globals.py", required: true }
+        - { label: "pass_obj()", source_file: "decorators.py", required: false }
+      relations:
+        - { source: "pass_context()", target: "get_current_context()", relation: "calls", required: true }
+      seed_expected:
+        - { label: "pass_context()", source_file: "decorators.py" }
+        - { label: "get_current_context()", source_file: "globals.py" }
+
+  - id: simple-flow-02
+    question: "How does Click track where a parameter's value came from (command-line, environment variable, default, etc.)?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "ParameterSource", source_file: "core.py", required: true }
+        - { label: ".set_parameter_source()", source_file: "core.py", required: true }
+        - { label: ".get_parameter_source()", source_file: "core.py", required: true }
+        - { label: "Context", source_file: "core.py", required: false }
+      seed_expected:
+        - { label: "ParameterSource", source_file: "core.py" }
+
+  - id: simple-flow-03
+    question: "What is the role of Context.invoke() and Context.forward() for chaining command calls?"
+    category: data-flow
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: ".invoke()", source_file: "core.py", required: true }
+        - { label: ".forward()", source_file: "core.py", required: true }
+        - { label: "Context", source_file: "core.py", required: true }
+      relations:
+        - { source: ".forward()", target: ".invoke()", relation: "calls", required: true }
+      seed_expected:
+        - { label: ".forward()", source_file: "core.py" }
+        - { label: ".invoke()", source_file: "core.py" }
+
+  # ── API ───────────────────────────────────────────────────────────────────
+
+  - id: simple-api-01
+    question: "How are @click.command and @click.group decorators defined and how do they create Command and Group instances?"
+    category: api
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "command()", source_file: "decorators.py", required: true }
+        - { label: "group()", source_file: "decorators.py", required: true }
+        - { label: "Command", source_file: "core.py", required: true }
+        - { label: "Group", source_file: "core.py", required: true }
+      seed_expected:
+        - { label: "command()", source_file: "decorators.py" }
+        - { label: "group()", source_file: "decorators.py" }
+
+  - id: simple-api-02
+    question: "How are @click.option and @click.argument decorators implemented and how do they attach parameters to a command?"
+    category: api
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "option()", source_file: "decorators.py", required: true }
+        - { label: "argument()", source_file: "decorators.py", required: true }
+        - { label: "_param_memo()", source_file: "decorators.py", required: true }
+        - { label: "Option", source_file: "core.py", required: false }
+        - { label: "Argument", source_file: "core.py", required: false }
+      seed_expected:
+        - { label: "option()", source_file: "decorators.py" }
+        - { label: "argument()", source_file: "decorators.py" }
+
+  # ── CONFIG ────────────────────────────────────────────────────────────────
+
+  - id: simple-config-01
+    question: "How does Click implement the make_pass_decorator pattern for passing shared objects through nested commands?"
+    category: config
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "make_pass_decorator()", source_file: "decorators.py", required: true }
+        - { label: "pass_meta_key()", source_file: "decorators.py", required: false }
+        - { label: "Context", source_file: "core.py", required: true }
+        - { label: ".find_object()", source_file: "core.py", required: false }
+        - { label: ".ensure_object()", source_file: "core.py", required: false }
+      seed_expected:
+        - { label: "make_pass_decorator()", source_file: "decorators.py" }
+
+  # ── ERROR HANDLING ────────────────────────────────────────────────────────
+
+  - id: simple-error-01
+    question: "What is the exception hierarchy in Click and how does ClickException differ from UsageError?"
+    category: error-handling
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "ClickException", source_file: "exceptions.py", required: true }
+        - { label: "UsageError", source_file: "exceptions.py", required: true }
+        - { label: "BadParameter", source_file: "exceptions.py", required: true }
+        - { label: "MissingParameter", source_file: "exceptions.py", required: false }
+        - { label: "BadOptionUsage", source_file: "exceptions.py", required: false }
+        - { label: "BadArgumentUsage", source_file: "exceptions.py", required: false }
+        - { label: "Abort", source_file: "exceptions.py", required: false }
+        - { label: "Exit", source_file: "exceptions.py", required: false }
+      relations:
+        - { source: "UsageError", target: "ClickException", relation: "inherits", required: true }
+        - { source: "BadParameter", target: "UsageError", relation: "inherits", required: false }
+      seed_expected:
+        - { label: "ClickException", source_file: "exceptions.py" }
+        - { label: "UsageError", source_file: "exceptions.py" }
+
+  - id: simple-error-02
+    question: "How does augment_usage_errors() attach context information to exceptions raised during command parsing?"
+    category: error-handling
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "augment_usage_errors()", source_file: "core.py", required: true }
+        - { label: "UsageError", source_file: "exceptions.py", required: true }
+        - { label: "Context", source_file: "core.py", required: false }
+        - { label: ".invoke()", source_file: "core.py", required: false }
+      relations:
+        - { source: ".invoke()", target: "augment_usage_errors()", relation: "calls", required: false }
+      seed_expected:
+        - { label: "augment_usage_errors()", source_file: "core.py" }
+
+  # ── TYPE CONVERSION ───────────────────────────────────────────────────────
+
+  - id: simple-type-01
+    question: "How does Click's type system work? What is ParamType and how do built-in types like Choice, IntRange, and File extend it?"
+    category: data-flow
+    difficulty: medium
+    expected:
+      nodes:
+        - { label: "ParamType", source_file: "types.py", required: true }
+        - { label: "Choice", source_file: "types.py", required: true }
+        - { label: "IntRange", source_file: "types.py", required: true }
+        - { label: "File", source_file: "types.py", required: true }
+        - { label: ".convert()", source_file: "types.py", required: false }
+        - { label: "Path", source_file: "types.py", required: false }
+      seed_expected:
+        - { label: "ParamType", source_file: "types.py" }
+        - { label: "Choice", source_file: "types.py" }
+
+  # ── TERMINAL UI ───────────────────────────────────────────────────────────
+
+  - id: simple-termui-01
+    question: "What terminal UI functions does Click provide for user interaction, such as prompting and displaying styled output?"
+    category: api
+    difficulty: easy
+    expected:
+      nodes:
+        - { label: "prompt()", source_file: "termui.py", required: true }
+        - { label: "confirm()", source_file: "termui.py", required: true }
+        - { label: "echo()", source_file: "utils.py", required: true }
+        - { label: "style()", source_file: "termui.py", required: true }
+        - { label: "secho()", source_file: "termui.py", required: false }
+        - { label: "progressbar()", source_file: "termui.py", required: false }
+        - { label: "echo_via_pager()", source_file: "termui.py", required: false }
+      seed_expected:
+        - { label: "prompt()", source_file: "termui.py" }
+        - { label: "echo()", source_file: "utils.py" }
+
+  - id: simple-termui-02
+    question: "How does Click's CliRunner enable isolated testing of command-line scripts, and what does it capture?"
+    category: api
+    difficulty: hard
+    expected:
+      nodes:
+        - { label: "CliRunner", source_file: "testing.py", required: true }
+        - { label: "Result", source_file: "testing.py", required: true }
+        - { label: ".invoke()", source_file: "testing.py", required: true }
+        - { label: "EchoingStdin", source_file: "testing.py", required: false }
+        - { label: ".isolation()", source_file: "testing.py", required: false }
+      seed_expected:
+        - { label: "CliRunner", source_file: "testing.py" }
+        - { label: "Result", source_file: "testing.py" }
